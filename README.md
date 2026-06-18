@@ -1,6 +1,6 @@
 # NBA CoSQL Spatial Pipeline
 
-**IE7500 Natural Language Processing | Northeastern EDGE | Summer 2026**  
+**IE7500 Natural Language Processing | Northeastern University COE | Summer 2026**  
 **Team: Rosalina Torres, Craig Habel, Sean Lynch**
 
 > Conversational Text-to-SQL (CoSQL) pipeline over NBA spatial shot-chart data with a full WOZ annotation layer.
