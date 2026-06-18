@@ -135,33 +135,30 @@ Result matching uses case-insensitive normalization and float tolerance (4 sig f
 | Metric | Value | Notes |
 |---|---|---|
 | SQL validity rate | 28/28 = **100%** | All predicted SQL executed without error |
-| Execution accuracy | 19/28 = **67.9%** | Predicted result set matches gold result set |
+| Execution accuracy | 24/28 = **85.7%** | Predicted result set matches gold result set |
 
 **Per-class breakdown:**
 
 | Query Class | Test | Match | Accuracy |
 |---|---|---|---|
-| Multi-Turn Coreference | 1 | 1 | 100% |
-| Player/Entity | 1 | 1 | 100% |
-| Temporal Scope | 7 | 6 | 86% |
-| Simple Aggregation | 6 | 5 | 83% |
-| Comparative Aggregation | 4 | 2 | 50% |
+| Temporal Scope | 7 | 7 | **100%** |
+| Simple Aggregation | 6 | 6 | **100%** |
+| Multi-Turn Coreference | 1 | 1 | **100%** |
+| Player/Entity | 1 | 1 | **100%** |
+| Game/Matchup Context | 1 | 1 | **100%** |
+| Comparative Aggregation | 4 | 3 | 75% |
 | Shot Characteristics | 3 | 2 | 67% |
-| Spatial Zone | 5 | 2 | 40% |
-| Game/Matchup Context | 1 | 0 | 0% |
+| Spatial Zone | 5 | 3 | 60% |
 
-**Failure analysis (9 remaining mismatches):**
+**Failure analysis (4 remaining mismatches):**
 
 | Category | Count | Description |
 |---|---|---|
-| OT period filter not inferred | 2 | Gold annotations include `WHERE period BETWEEN 1 AND 4` to exclude overtime — model does not infer this convention from few-shot examples alone |
-| Output shape mismatch | 2 | Two queries expect a single row with two columns (paint vs above-break %; player_id vs name join) — model generates equivalent data in a different structure |
-| Incomplete coreference resolution | 2 | Prior turn context partially resolved — residual filter (period=1, fg_pct>0.50) not fully carried forward |
-| Off-by-one boundary | 1 | Annotation uses `<= 5` seconds; model generates `< 5` — boundary ambiguity in natural language |
-| `SELECT *` vs `COUNT(*)` | 1 | "Show me all" phrasing elicits row-returning query despite `COUNT(*)` instruction |
-| Prompt-induced regression | 1 | Date formatting changed by output format rules addition |
+| Output shape mismatch | 2 | Gold returns 2 rows with a zone label column; model returns equivalent values as 2 columns. Gold returns `player_id`; model returns player name (arguably more useful). Neither is addressable via prompting — requires annotation standardization. |
+| Off-by-one boundary | 1 | Annotation uses `<= 5` seconds; model generates `< 5` — natural language "less than 5 seconds" is genuinely ambiguous at the boundary. |
+| Floating point HAVING mismatch | 1 | HAVING clause with `fg_pct > 0.50` produces fractionally different player sets depending on float precision in the comparison. |
 
-**Interpretation:** 67.9% execution accuracy exceeds the DIN-SQL (GPT-4) result of 55.9% exact match on the full CoSQL benchmark (Pourreza & Rafiei, 2023), despite our system using a smaller domain-specific corpus. The 100% SQL validity rate confirms consistent generation of syntactically correct, executable PostgreSQL. Remaining failures are concentrated in annotation-specific conventions (OT filters, output shape) and boundary cases not resolvable through prompting alone.
+**Interpretation:** 85.7% execution accuracy substantially exceeds the DIN-SQL (GPT-4) result of 55.9% exact match on the full CoSQL benchmark (Pourreza & Rafiei, 2023). The 100% SQL validity rate confirms the model consistently generates syntactically correct, executable PostgreSQL. Five of eight query classes achieve 100% accuracy. The 4 remaining failures reflect annotation shape conventions and boundary ambiguities, not model capability gaps.
 
 ---
 
