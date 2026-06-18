@@ -1,0 +1,8 @@
+.env
+.DS_Store
+__pycache__/
+*.pyc
+*.pyo
+NBA_Data.zip
+NBA_Data_craig/
+PRD-NBA-CoSQL-NLP-GROUP.dotx
