@@ -29,6 +29,7 @@ nba-cosql-spatial-pipeline/
 │
 ├── annotation/                   # 8 query class CSVs — 139 NL/SQL pairs
 ├── docs/
+│   ├── EVALUATION_RESULTS.md     # Full iteration history: 42.9% → 67.9% → 85.7%
 │   ├── BUG_REPORT.md             # 13 bugs documented with root causes + fixes
 │   ├── ANNOTATION_SHEET_SETUP.md # WOZ annotation protocol
 │   ├── NBA_API_REFERENCE.md      # nba_api v1.11.4 field reference
