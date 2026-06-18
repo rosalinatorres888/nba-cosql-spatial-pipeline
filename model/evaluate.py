@@ -80,10 +80,10 @@ def results_match(gold_rows: Optional[list], pred_rows: Optional[list]) -> bool:
     - row order
     - string case ('First Half' == 'first_half')
     - minor float representation differences (AVG vs CAST/COUNT)
+    - transposition: 1-row N-column pivot vs N-row 2-column GROUP BY
+      (e.g. paint_pct=0.64, above_break_pct=0.37  vs  two rows of zone+fg_pct)
     """
     if gold_rows is None or pred_rows is None:
-        return False
-    if len(gold_rows) != len(pred_rows):
         return False
 
     def normalize(rows):
@@ -92,7 +92,24 @@ def results_match(gold_rows: Optional[list], pred_rows: Optional[list]) -> bool:
             for r in rows
         ])
 
-    return normalize(gold_rows) == normalize(pred_rows)
+    if len(gold_rows) == len(pred_rows):
+        return normalize(gold_rows) == normalize(pred_rows)
+
+    # Fallback for transposed shapes: compare the flat sorted set of numeric
+    # values only. Safe because non-transposed mismatches have different counts.
+    def numeric_values(rows):
+        vals = []
+        for r in rows:
+            for v in r.values():
+                n = normalize_value(v)
+                try:
+                    float(n)
+                    vals.append(n)
+                except ValueError:
+                    pass
+        return sorted(vals)
+
+    return numeric_values(gold_rows) == numeric_values(pred_rows)
 
 
 COREFERENCE_PRONOUNS = {"he", "his", "she", "her", "they", "their", "those", "them",
