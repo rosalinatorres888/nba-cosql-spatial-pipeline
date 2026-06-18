@@ -67,7 +67,9 @@ Small-scale feasibility tests conducted before full annotation:
 |---|---|---|
 | Database | PostgreSQL 14 + psycopg2 | ACID compliance, spatial query support |
 | Data collection | nba_api v1.11.4 | Official NBA Stats API Python wrapper |
-| NL→SQL inference | Few-shot prompting via Claude API | No training data required; schema-aware prompts |
+| NL→SQL inference | `model/nl2sql.py` — few-shot prompting via Claude Opus 4.8 | No training data required; schema-aware prompts; DIN-SQL style |
+| Coreference | `prior_sql` carry-forward in `nl2sql.py` | Rule-based; prior turn SQL merged with new utterance delta |
+| Evaluation | `model/evaluate.py` — execution accuracy on held-out split | SQL runs against live DB; result-set comparison |
 | Annotation tooling | CSV + custom HTML reviewer | Portable, shareable without infrastructure |
 | IAA analysis | pandas + manual κ formula | Transparent calculation, documented paradox |
 

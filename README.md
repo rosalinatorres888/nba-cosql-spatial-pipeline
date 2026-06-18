@@ -34,7 +34,12 @@ nba-cosql-spatial-pipeline/
 │   ├── NBA_API_REFERENCE.md      # nba_api v1.11.4 field reference
 │   └── query_classes_and_clarify_templates.md
 │
+├── model/
+│   ├── nl2sql.py                 # Few-shot NL→SQL inference (DIN-SQL style, Claude API)
+│   └── evaluate.py               # Execution accuracy evaluation on held-out test split
+│
 ├── sql_training_full.csv         # Flat training corpus (all 139 pairs)
+├── requirements.txt              # Pinned Python dependencies
 └── woz_annotation_template.csv   # Blank WOZ template
 ```
 
@@ -80,11 +85,39 @@ play_by_play(id, event_id, game_id, event_type, game_clock, player_ids,
 
 ---
 
+## Model
+
+Few-shot NL→SQL inference using Claude Opus 4.8 (DIN-SQL style):
+
+```python
+from model.nl2sql import NL2SQL
+
+model = NL2SQL()
+
+# Single turn
+sql = model.predict("How many 3-pointers did Tatum make from the left corner?")
+
+# Multi-turn coreference
+results = model.predict_conversation([
+    "How many shots did Jaylen Brown attempt in Q4?",
+    "What about only his made shots?",
+    "And just from the restricted area?",
+])
+```
+
+Evaluate execution accuracy on a held-out test split:
+
+```bash
+python model/evaluate.py --split 0.2 --seed 42
+```
+
+---
+
 ## Setup
 
 ```bash
 # Install dependencies
-pip install nba-api psycopg2-binary python-dotenv pandas
+pip install -r requirements.txt
 
 # Create database and schema
 createdb nba_spatial
