@@ -68,7 +68,7 @@ play_by_play(id, event_id, game_id, event_type, game_clock, player_ids,
 
 ## Annotation
 
-139 NL/SQL pairs across 8 query classes — all execution-verified against the live `nba_spatial` database.
+139 NL/SQL pairs across 8 query classes, execution-verified against the live `nba_spatial` database.
 
 | Class | Pairs |
 |---|---|
@@ -81,8 +81,9 @@ play_by_play(id, event_id, game_id, event_type, game_clock, player_ids,
 | Game/Matchup Context | 18 |
 | Shot Characteristics | 15 |
 
-**Execution accuracy:** 138/139 (99.3%)  
-**Cross-rater agreement:** 68/69 (98.6%)
+**Annotation corpus execution rate:** 138/139 (99.3%) — 1 permanent `needs_revision` (Shot Characteristics: "contested shots" query; `defender` column is NULL for all rows in the nba_api ShotChartDetail endpoint)  
+**Cross-rater agreement:** 68/69 (98.6%)  
+**Model inference accuracy:** 28/28 = **100%** on held-out test split (20%, seed=42) of the 138 approved pairs
 
 ---
 
