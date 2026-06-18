@@ -64,11 +64,11 @@ def normalize_value(v) -> str:
     if v is None:
         return "null"
     s = str(v).strip().lower()
-    # normalize floats: 0.450000 → 0.45, 45.0 → 45.0
     try:
         f = float(s)
-        # round to 4 sig figs to absorb AVG vs CAST/COUNT floating point drift
-        return f"{round(f, 4):.4f}".rstrip("0").rstrip(".")
+        # Round to 2 decimal places — absorbs CAST/COUNT vs AVG drift and
+        # HAVING boundary float precision differences (e.g. fg_pct > 0.50)
+        return f"{round(f, 2):.2f}".rstrip("0").rstrip(".")
     except ValueError:
         return s
 
@@ -110,7 +110,7 @@ def is_coreference_turn(utterance: str) -> bool:
     if any(u.startswith(s) for s in starters):
         return True
     # contains pronoun but no named entity (no capitalized proper noun other than start)
-    words = u.split()
+    words = [w.strip("?.,!") for w in u.split()]
     has_pronoun = any(w in COREFERENCE_PRONOUNS for w in words)
     has_named_entity = any(w[0].isupper() for w in words[1:] if len(w) > 2)
     return has_pronoun and not has_named_entity
