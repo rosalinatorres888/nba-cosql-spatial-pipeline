@@ -105,7 +105,8 @@ def is_coreference_turn(utterance: str) -> bool:
     u = utterance.lower().strip()
     # starts with pronoun or coreference phrase
     starters = ("he ", "his ", "they ", "those ", "what about", "and ", "only ",
-                 "how many did he", "how many of those", "what about")
+                 "how many did he", "how many of those", "how many were",
+                 "what about", "were there", "did he", "did they")
     if any(u.startswith(s) for s in starters):
         return True
     # contains pronoun but no named entity (no capitalized proper noun other than start)
