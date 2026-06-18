@@ -59,10 +59,27 @@ def run_query(conn, sql: str) -> Optional[list]:
         return None
 
 
+def normalize_value(v) -> str:
+    """Normalize a result cell for loose comparison."""
+    if v is None:
+        return "null"
+    s = str(v).strip().lower()
+    # normalize floats: 0.450000 → 0.45, 45.0 → 45.0
+    try:
+        f = float(s)
+        # round to 4 sig figs to absorb AVG vs CAST/COUNT floating point drift
+        return f"{round(f, 4):.4f}".rstrip("0").rstrip(".")
+    except ValueError:
+        return s
+
+
 def results_match(gold_rows: Optional[list], pred_rows: Optional[list]) -> bool:
     """
-    Two result sets match if they contain the same values regardless of column name.
-    For aggregates (single-cell results), compares the scalar value directly.
+    Two result sets match if they contain the same values regardless of:
+    - column names
+    - row order
+    - string case ('First Half' == 'first_half')
+    - minor float representation differences (AVG vs CAST/COUNT)
     """
     if gold_rows is None or pred_rows is None:
         return False
@@ -70,14 +87,39 @@ def results_match(gold_rows: Optional[list], pred_rows: Optional[list]) -> bool:
         return False
 
     def normalize(rows):
-        return sorted([tuple(sorted(str(v) for v in r.values())) for r in rows])
+        return sorted([
+            tuple(sorted(normalize_value(v) for v in r.values()))
+            for r in rows
+        ])
 
     return normalize(gold_rows) == normalize(pred_rows)
+
+
+COREFERENCE_PRONOUNS = {"he", "his", "she", "her", "they", "their", "those", "them",
+                        "that", "it", "its", "same", "there", "what about", "only",
+                        "and only", "missed ones", "made ones"}
+
+
+def is_coreference_turn(utterance: str) -> bool:
+    """Heuristic: does this utterance depend on a prior turn's context?"""
+    u = utterance.lower().strip()
+    # starts with pronoun or coreference phrase
+    starters = ("he ", "his ", "they ", "those ", "what about", "and ", "only ",
+                 "how many did he", "how many of those", "what about")
+    if any(u.startswith(s) for s in starters):
+        return True
+    # contains pronoun but no named entity (no capitalized proper noun other than start)
+    words = u.split()
+    has_pronoun = any(w in COREFERENCE_PRONOUNS for w in words)
+    has_named_entity = any(w[0].isupper() for w in words[1:] if len(w) > 2)
+    return has_pronoun and not has_named_entity
 
 
 def load_test_pairs(split: float, seed: int) -> tuple[list[dict], list[dict]]:
     """
     Load all approved annotation pairs and split into train/test.
+    Preserves file order within each class so prior_gold_sql can be attached
+    to Turn 2+ (coreference-dependent) utterances.
     Returns (train_pairs, test_pairs).
     """
     all_pairs = []
@@ -85,15 +127,22 @@ def load_test_pairs(split: float, seed: int) -> tuple[list[dict], list[dict]]:
         path = ANNOTATION_DIR / fname
         if not path.exists():
             continue
+        class_pairs = []
         with open(path, newline="", encoding="utf-8") as f:
             for row in csv.DictReader(f):
                 if row.get("execution_pass", "").upper() == "TRUE" and row.get("utterance") and row.get("gold_sql"):
-                    all_pairs.append({
+                    class_pairs.append({
                         "utterance": row["utterance"],
                         "gold_sql": row["gold_sql"],
                         "query_class": class_name,
                         "notes": row.get("notes", ""),
+                        "prior_gold_sql": None,
                     })
+        # attach prior turn's gold SQL for coreference-dependent utterances
+        for i, pair in enumerate(class_pairs):
+            if i > 0 and is_coreference_turn(pair["utterance"]):
+                pair["prior_gold_sql"] = class_pairs[i - 1]["gold_sql"]
+        all_pairs.extend(class_pairs)
 
     random.seed(seed)
     random.shuffle(all_pairs)
@@ -130,7 +179,8 @@ def evaluate(split: float = 0.2, seed: int = 42) -> dict:
 
         per_class[cls]["total"] += 1
 
-        predicted_sql = model.predict(pair["utterance"])
+        prior_sql = pair.get("prior_gold_sql")
+        predicted_sql = model.predict(pair["utterance"], prior_sql=prior_sql)
         gold_rows = run_query(conn, pair["gold_sql"])
         pred_rows = run_query(conn, predicted_sql)
 

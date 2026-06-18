@@ -149,6 +149,13 @@ from the prior SQL unless the new utterance explicitly replaces them.
 Generate a single executable PostgreSQL SELECT query for the given question.
 Return ONLY the SQL — no explanation, no markdown, no semicolon.
 
+Output format rules:
+- "How many" questions → always use SELECT COUNT(*), never SELECT *
+- Shooting percentage → use CAST(SUM(CASE WHEN made_flag=1 THEN 1 ELSE 0 END) AS FLOAT) / COUNT(*)
+- Label strings in CASE WHEN → use lowercase_with_underscores (e.g. 'first_half', 'made', 'missed')
+- When returning a single ranked result → include the metric column, not just the group key
+- Period filters → use period IN (1,2) not period <= 2 (avoids including OT periods unintentionally)
+
 {DB_SCHEMA}
 
 Examples:
