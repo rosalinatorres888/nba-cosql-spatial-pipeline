@@ -11,7 +11,7 @@
 
 Conversational Text-to-SQL (CoSQL) pipeline over NBA spatial shot-chart data — with a hand-annotated WOZ corpus, coreference resolution, and 100% execution accuracy on a held-out test split.
 
-**[Live Annotation Review Tool](https://serene-alfajores-56283d.netlify.app)** · [Evaluation Results](docs/EVALUATION_RESULTS.md) · [Bug Report](docs/BUG_REPORT.md)
+**[Live Annotation Review Tool](https://nba-cosql-spatial-annotation-tool.netlify.app/)** · [Evaluation Results](docs/EVALUATION_RESULTS.md) · [Bug Report](docs/BUG_REPORT.md)
 
 ---
 
