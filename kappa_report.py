@@ -1,6 +1,6 @@
 """
 Inter-Annotator Agreement (IAA) Report
-CoSQL NBA Spatial — IE7500 NLP Northeastern EDGE Summer 2026
+CoSQL NBA Spatial — IE7500 NLP Northeastern University College of Engineering - June 2026
 Author: Rosalina Torres
 
 Computes Cohen's Kappa and percent agreement across all 139 WOZ annotation pairs.
