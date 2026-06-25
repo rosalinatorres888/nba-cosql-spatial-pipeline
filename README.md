@@ -11,7 +11,12 @@
 
 Conversational Text-to-SQL (CoSQL) pipeline over NBA spatial shot-chart data — with a hand-annotated WOZ corpus, coreference resolution, and 100% execution accuracy on a held-out test split.
 
-**[Live Annotation Review Tool](https://nba-cosql-spatial-annotation-tool.netlify.app/)** · [Evaluation Results](docs/EVALUATION_RESULTS.md) · [Bug Report](docs/BUG_REPORT.md)
+**[CoSQL Annotation Guide](https://tinyurl.com/NL-Annotation-Guide)** 
+
+**[CoSQL_NBA_WOZ_Annotation Tracker](https://tinyurl.com/CoSQL-NBA-WOZ-Annotations)** 
+
+**[Live Annotation Review Tool](https://nba-cosql-spatial-annotation-tool.netlify.app/)** 
+
 
 ---
 
@@ -38,6 +43,7 @@ Users ask multi-turn basketball questions in natural language. The system resolv
 
 ## Results
 
+
 | Metric | Value |
 |---|---|
 | Execution accuracy (held-out test set) | **28/28 = 100%** |
@@ -47,7 +53,9 @@ Users ask multi-turn basketball questions in natural language. The system resolv
 | Cross-rater agreement (Cohen's κ) | 68/69 = 98.6% |
 | DIN-SQL GPT-4 CoSQL benchmark (Pourreza & Rafiei, 2023) | 55.9% EM |
 
-The model reached 100% through 6 evaluation iterations — from 42.9% baseline to 100% final — documented in [EVALUATION_RESULTS.md](docs/EVALUATION_RESULTS.md).
+See: [Bug Report](docs/BUG_REPORT.md)
+
+The model reached 100% through 6 evaluation iterations — from 42.9% baseline to 100% final — documented in [Evaluation Results](docs/EVALUATION_RESULTS.md)  
 
 ---
 
@@ -177,4 +185,4 @@ python kappa_report.py      # inter-annotator agreement
 
 ---
 
-*IE7500 NLP · Northeastern University COE · Summer 2026 · Rosalina Torres*
+*IE7500 NLP · Northeastern University College of Engineering · Summer 2026 · Rosalina Torres*
