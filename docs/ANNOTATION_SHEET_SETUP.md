@@ -1,6 +1,6 @@
 # WOZ Annotation Sheet Setup Guide
 
-**CoSQL NBA Spatial · IE7600 · Real-Time Collaboration**
+**CoSQL NBA Spatial · IE7500 · Natural Language Processing**
 
 ---
 
@@ -13,7 +13,7 @@ Use Google Sheets for real-time collaboration. Share edit access with Craig and 
 1. Go to https://sheets.google.com
 2. **New blank spreadsheet**
 3. Name it: `CoSQL_NBA_WOZ_Annotations_v1`
-4. Share link with Craig + Sean (edit access)
+4. Share link (edit access)
 
 ### **Step 2: Set Up Headers**
 
@@ -92,7 +92,7 @@ Weekly Annotator Workload:
 3. Post the link in your repo README:
 
 ```markdown
-**Live Annotation Tracker:** [Google Sheets Link](https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit)
+**Live Annotation Tracker:** [CoSQL_NBA_WOZ_Annotations_v1](https://docs.google.com/spreadsheets/d/1mCtGq4VJPBN4ow6oAIkR58xeSMXgS_RmtTvAZgLJJJ0/edit?usp=sharing)
 ```
 
 ---
@@ -241,7 +241,7 @@ Before week ends:
    ```bash
    git tag m2-submission-woz-final
    git push origin m2-submission-woz-final
-   ```
+   ```can 
 
 ---
 
