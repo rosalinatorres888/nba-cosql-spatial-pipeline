@@ -1,4 +1,4 @@
-# NBA CoSQL Spatial Pipeline
+# The Boston Celtics 2023–2024 NBA Champions - Conversational NL-to-SQL Spatial Data Pipeline
 
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
