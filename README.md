@@ -1,4 +1,4 @@
-# The Boston Celtics 2023–2024 NBA Champions - Conversational NL-to-SQL Spatial Data Pipeline
+# Boston Celtics - 2023–2024 NBA Champions - Conversational Text-to-SQL (CoSQL) Spatial Data Pipeline 
 
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
@@ -7,15 +7,11 @@
 ![IAA](https://img.shields.io/badge/Inter--Rater%20Agreement-98.6%25-22c55e)
 ![License](https://img.shields.io/badge/License-MIT-6b7280)
 
-**IE7500 Natural Language Processing · Northeastern University COE · Summer 2026**
+By: Rosalina Torres
+
+**IE7500 Natural Language Processing · Northeastern University College of Engineering · Summer 2026**
 
 Conversational Text-to-SQL (CoSQL) pipeline over NBA spatial shot-chart data — with a hand-annotated WOZ corpus, coreference resolution, and 100% execution accuracy on a held-out test split.
-
-**[CoSQL Annotation Guide](https://tinyurl.com/NL-Annotation-Guide)** 
-
-**[CoSQL NBA WOZ Annotation Tracker](https://tinyurl.com/CoSQL-NBA-WOZ-Annotations)** 
-
-**[Live Annotation Review Tool](https://nba-cosql-spatial-annotation-tool.netlify.app/)** 
 
 
 ---
@@ -40,6 +36,19 @@ Users ask multi-turn basketball questions in natural language. The system resolv
 ```
 
 ---
+
+
+## User Guide:
+
+**[CoSQL Annotation Guide](https://tinyurl.com/NL-Annotation-Guide)** 
+
+**[CoSQL NBA WOZ Annotation Tracker](https://tinyurl.com/CoSQL-NBA-WOZ-Annotations)** 
+
+**[Live Annotation Review Tool](https://nba-cosql-spatial-annotation-tool.netlify.app/)** 
+
+
+
+
 
 ## Results
 
