@@ -13,7 +13,7 @@ Conversational Text-to-SQL (CoSQL) pipeline over NBA spatial shot-chart data —
 
 **[CoSQL Annotation Guide](https://tinyurl.com/NL-Annotation-Guide)** 
 
-**[CoSQL_NBA_WOZ_Annotation Tracker](https://tinyurl.com/CoSQL-NBA-WOZ-Annotations)** 
+**[CoSQL NBA WOZ Annotation Tracker](https://tinyurl.com/CoSQL-NBA-WOZ-Annotations)** 
 
 **[Live Annotation Review Tool](https://nba-cosql-spatial-annotation-tool.netlify.app/)** 
 
