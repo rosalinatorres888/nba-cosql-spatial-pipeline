@@ -2,10 +2,9 @@
 
 **CoSQL NBA Spatial · IE7500 · WOZ Annotation Protocol**
 
+[CoSQL Annotation Guide](https://tinyurl.com/NL-Annotation-Guide)
 
 [CoSQL_NBA_WOZ_Annotation Tracker](https://tinyurl.com/CoSQL-NBA-WOZ-Annotations)
-
-[CoSQL Annotation Guide](https://tinyurl.com/NL-Annotation-Guide)
 
 [Annotation Review Tool](https://tinyurl.com/Annotation-Review-Tool)
 
