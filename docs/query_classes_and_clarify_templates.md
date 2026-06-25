@@ -1,6 +1,13 @@
 # Query Classes & Clarify Templates
 
-**CoSQL NBA Spatial · IE7600 · WOZ Annotation Protocol**
+**CoSQL NBA Spatial · IE7500 · WOZ Annotation Protocol**
+
+
+[CoSQL_NBA_WOZ_Annotation Tracker](https://tinyurl.com/CoSQL-NBA-WOZ-Annotations)
+
+[CoSQL Annotation Guide](https://tinyurl.com/NL-Annotation-Guide)
+
+[Annotation Review Tool](https://tinyurl.com/Annotation-Review-Tool)
 
 This document defines the 8 query classes and clarification templates used in annotation. All training pairs (120–150 total) must be distributed across these classes with a minimum of 15 pairs per class.
 
