@@ -1,6 +1,6 @@
 """
 evaluate.py — Execution Accuracy Evaluation
-CoSQL NBA Spatial Pipeline | IE7500 NLP Northeastern EDGE Summer 2026
+CoSQL NBA Spatial Pipeline | IE7500 NLP Northeastern University COE Summer 2026
 Author: Rosalina Torres
 
 Evaluates the nl2sql inference model against a held-out test split of the
