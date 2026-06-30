@@ -1,7 +1,6 @@
 # Milestone 2: Model Development
 
-**IE7500 Natural Language Processing | Northeastern EDGE | Summer 2026**  
-**Team: Rosalina Torres, Craig Habel, Sean Lynch**  
+**IE7500 Natural Language Processing | Northeastern COE | Summer 2026**  
 **Due:** July 5, 2026
 
 ---
