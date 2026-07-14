@@ -22,6 +22,10 @@ import random
 from pathlib import Path
 from typing import Optional
 import anthropic
+from dotenv import load_dotenv
+
+# pick up ANTHROPIC_API_KEY from the project .env when run standalone
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 ANNOTATION_DIR = Path(__file__).parent.parent / "annotation"
 SCHEMA_PATH = Path(__file__).parent.parent / "schema.sql"

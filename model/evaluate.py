@@ -27,6 +27,10 @@ from typing import Optional
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from dotenv import load_dotenv
+
+# pick up ANTHROPIC_API_KEY + DB_* from the project .env
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 # allow running from project root or model/ directory
 sys.path.insert(0, str(Path(__file__).parent.parent))

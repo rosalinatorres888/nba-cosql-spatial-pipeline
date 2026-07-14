@@ -166,9 +166,19 @@ psql nba_spatial < schema.sql
 
 cp .env.example .env        # add ANTHROPIC_API_KEY + DB credentials
 
-python collect_nba_data.py  # pull from nba_api
-python kappa_report.py      # inter-annotator agreement
+python collect_nba_data.py  # pull from nba_api (~10 min, rate-limited)
+python kappa_report.py      # annotation verification report
+
+# reproduce the headline metric (26 Claude API calls, ~3 min)
+python model/evaluate.py    # expect: Execution accuracy 23/26 (88.5%)
+
+# re-verify Bug 8 spatial-zone counts
+psql nba_spatial < scripts/verify_bug8.sql
 ```
+
+All scripts read credentials from `.env` automatically. Results are seeded
+(`--seed 42` default) so the same test split is selected every run; execution
+accuracy should reproduce exactly or within ±1 pair (LLM sampling variance).
 
 ---
 
