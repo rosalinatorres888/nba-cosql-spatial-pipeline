@@ -3,17 +3,20 @@ Inter-Annotator Agreement (IAA) Report
 CoSQL NBA Spatial — IE7500 NLP Northeastern University College of Engineering - June 2026
 Author: Rosalina Torres
 
-Computes Cohen's Kappa and percent agreement across all 139 WOZ annotation pairs.
+Reports execution pass rate across all WOZ annotation pairs, and Cohen's Kappa
+ONLY where it is statistically valid.
 
-NOTE ON KAPPA PARADOX:
-When base rates are extreme (here: 99.3% pass rate), Cohen's Kappa is artificially
-deflated because Pe (expected by chance) is also near 1.0. A κ = 0.50 here does NOT
-indicate moderate agreement — it reflects a near-perfect base rate creating a near-1 Pe.
-This is a documented statistical artifact (Cicchetti & Feinstein, 1990).
+WHY THE OLD κ WAS REMOVED:
+Cohen's κ requires the SAME items independently rated by TWO raters. In this
+corpus each pair has exactly one auditor (Craig or Sean on disjoint subsets),
+so there are zero paired observations. The previous version combined the
+overall pass rate (as "observed agreement") with the two auditors' pass rates
+on disjoint subsets (as marginals) — that quantity is not Cohen's κ and should
+not be reported as inter-annotator agreement.
 
-The paper should report BOTH:
-  (1) Percent agreement (99.3%) as the primary metric
-  (2) κ with a note on the base-rate paradox
+To report a real κ, doubly-annotate a subset (both auditors judge the same
+pairs) and record the second judgment in the kappa_agreement column. This
+script computes κ automatically once such rows exist.
 """
 
 import pandas as pd
@@ -43,12 +46,17 @@ def load_all():
     return dfs
 
 
-def cohen_kappa_manual(po, p_rater1_pos, p_rater2_pos):
+def cohen_kappa_paired(rater1: pd.Series, rater2: pd.Series):
     """
-    κ = (Po - Pe) / (1 - Pe)
-    Pe = p(both say pass by chance) + p(both say fail by chance)
+    Cohen's κ on PAIRED observations: both series must be 0/1 judgments of
+    the SAME items, aligned by index. Returns None if fewer than 2 pairs.
     """
-    pe = (p_rater1_pos * p_rater2_pos) + ((1 - p_rater1_pos) * (1 - p_rater2_pos))
+    n = len(rater1)
+    if n < 2 or len(rater2) != n:
+        return None
+    po = float((rater1 == rater2).mean())
+    p1, p2 = float(rater1.mean()), float(rater2.mean())
+    pe = p1 * p2 + (1 - p1) * (1 - p2)
     if pe >= 1.0:
         return 1.0
     return (po - pe) / (1 - pe)
@@ -81,54 +89,51 @@ def run_report():
         a = int(df['exec_int'].sum())
         print(f'  {label:<28} {n:>6}  {a:>8}  {a/n*100:>6.1f}%')
 
-    # Auditor-based kappa
     craig = combined[combined['state_auditor'] == 'Craig']
     sean = combined[combined['state_auditor'] == 'Sean']
-    p_craig_pass = craig['exec_int'].mean()
-    p_sean_pass = sean['exec_int'].mean()
 
-    kappa = cohen_kappa_manual(pass_rate, p_craig_pass, p_sean_pass)
+    # Real Cohen's κ is only computable on doubly-annotated pairs: rows where
+    # kappa_agreement holds a second, independent judgment of the same item.
+    double = combined[combined['kappa_agreement'].notna()
+                      & (combined['kappa_agreement'].astype(str).str.strip() != '')]
+    kappa = None
+    if len(double) >= 2:
+        r1 = double['execution_pass'].map(BOOL_MAP)
+        r2 = double['kappa_agreement'].map(BOOL_MAP)
+        kappa = cohen_kappa_paired(r1, r2)
 
     print(f'\n{"=" * 60}')
-    print('COHEN\'S KAPPA (execution agreement)')
+    print("COHEN'S KAPPA (inter-annotator agreement)")
     print(f'{"=" * 60}')
-    print(f'  Craig-audited pairs:  {len(craig)}  (pass rate: {p_craig_pass:.4f})')
-    print(f'  Sean-audited pairs:   {len(sean)}  (pass rate: {p_sean_pass:.4f})')
-    print(f'  Observed agreement (Po): {pass_rate:.4f}')
-    pe = (p_craig_pass * p_sean_pass) + ((1 - p_craig_pass) * (1 - p_sean_pass))
-    print(f'  Expected by chance (Pe): {pe:.4f}')
-    print(f'  κ = {kappa:.4f}')
-
-    print(f'\n  ⚠️  KAPPA PARADOX NOTE:')
-    print(f'  With Po = {pass_rate:.3f} and Pe = {pe:.4f}, κ is deflated by the near-perfect')
-    print(f'  base rate (Cicchetti & Feinstein, 1990). Percent agreement (99.3%) is the')
-    print(f'  recommended primary metric when base rates are extreme.')
-
-    if pass_rate >= 0.97:
-        print(f'\n  ✅ PRIMARY METRIC: {pass_rate*100:.1f}% agreement — exceeds 95% threshold')
-    if kappa >= 0.75:
-        print(f'  ✅ κ = {kappa:.4f} — substantial agreement (Landis & Koch, 1977)')
-    elif kappa >= 0.60:
-        print(f'  ⚠️  κ = {kappa:.4f} — moderate (interpret with kappa paradox caveat)')
+    print(f'  Craig-audited pairs:  {len(craig)}')
+    print(f'  Sean-audited pairs:   {len(sean)}')
+    print(f'  Doubly-annotated pairs: {len(double)}')
+    if kappa is not None:
+        print(f'  κ = {kappa:.4f} on {len(double)} doubly-annotated pairs')
     else:
-        print(f'  ⚠️  κ = {kappa:.4f} — interpret with kappa paradox caveat (base rate artifact)')
+        print('  ⚠️  κ NOT COMPUTABLE: no pair has judgments from both auditors.')
+        print('     Each item was audited by exactly one person, so there are no')
+        print('     paired observations. To report κ, have both auditors judge a')
+        print('     shared subset and record the second judgment in kappa_agreement.')
 
     print(f'\n{"=" * 60}')
     print('SUMMARY FOR PAPER')
     print(f'{"=" * 60}')
     print(f'  Total WOZ pairs: {total} across 8 query classes')
-    print(f'  Execution verified: {approved}/{total} (99.3%) against live PostgreSQL (nba_spatial)')
+    print(f'  Execution verified: {approved}/{total} ({pass_rate*100:.1f}%) against live PostgreSQL (nba_spatial)')
     print(f'  Permanent limitation: 1 pair — defender column unavailable in ShotChartDetail')
-    print(f'  Inter-annotator agreement: Po = {pass_rate:.3f}, κ = {kappa:.2f}')
-    print(f'  Auditor balance: Craig {len(craig)} pairs, Sean {len(sean)} pairs')
+    if kappa is not None:
+        print(f'  Inter-annotator agreement: κ = {kappa:.2f} ({len(double)} doubly-annotated pairs)')
+    else:
+        print('  Inter-annotator agreement: not measurable (single-auditor protocol) —')
+        print('  report the execution pass rate as a verification rate, not as agreement.')
 
     return {
         'total': total,
         'approved': approved,
         'pass_rate': pass_rate,
         'kappa': kappa,
-        'po': pass_rate,
-        'pe': pe,
+        'n_double_annotated': len(double),
     }
 
 

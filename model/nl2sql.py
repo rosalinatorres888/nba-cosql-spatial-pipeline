@@ -178,9 +178,18 @@ class NL2SQL:
       4. Coreference (prior_sql carry-forward for Turn 2+)
     """
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None,
+                 examples: Optional[dict[str, list[dict]]] = None):
+        """
+        Args:
+            api_key:  Anthropic API key (falls back to ANTHROPIC_API_KEY env var)
+            examples: In-context example pool grouped by query class.
+                      Pass a train-only pool during evaluation — loading the
+                      default (all annotations) would leak test items into
+                      the few-shot prompt.
+        """
         self.client = anthropic.Anthropic(api_key=api_key or os.environ.get("ANTHROPIC_API_KEY"))
-        self.examples = load_examples()
+        self.examples = examples if examples is not None else load_examples()
         total = sum(len(v) for v in self.examples.values())
         print(f"Loaded {total} approved examples across {len(self.examples)} query classes")
 
