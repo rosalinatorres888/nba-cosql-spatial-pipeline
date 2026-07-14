@@ -221,13 +221,20 @@ Updated all distance-based zone boundaries to whole-feet units:
 | mid_range | `distance BETWEEN 80 AND 220` | `distance BETWEEN 8 AND 22` |
 
 ### Verified Row Counts (post-fix)
-| Zone | Count |
-|---|---|
-| Left corner 3 | 382 |
-| Right corner 3 | 394 |
-| Above break 3 | 2,706 |
-| In the paint | 3,344 |
-| Mid-range | 1,383 |
+**Scope: regular-season games only** (`games.season_type = 'Regular'`, 82 games).
+The original counts were measured before the 19 playoff games were collected;
+full-table counts are ~22% higher. Re-verify anytime with
+`psql nba_spatial < scripts/verify_bug8.sql`.
+
+| Zone | Original (Jun 2026) | Re-verified (Jul 2026, post-recollect) |
+|---|---|---|
+| Left corner 3 | 382 | 382 |
+| Right corner 3 | 394 | 394 |
+| Above break 3 | 2,706 | 2,710 † |
+| In the paint | 3,344 | 3,344 |
+| Mid-range | 1,383 | 1,383 |
+
+† +4 shots from minor upstream nba_api data revisions between collections; not a regression.
 
 ### Annotation Impact
 Any WOZ pairs written before this fix using distance-based zone filters would have produced empty result sets. The 10 seed annotation pairs were reviewed — only row 2 (left corner 3) and row 3 (above break, using y > 90 only) were affected. Row 2 is correct (uses x/y only). Row 3 was not affected as it did not include a distance filter.
