@@ -248,7 +248,8 @@ def load_into_db(conn, players, games, shots, plays):
         # Total seconds left in period = minutes_remaining * 60 + period_seconds_remaining
         if shots is not None and len(shots) > 0:
             shot_rows = [
-                (row['PLAYER_ID'], row['GAME_ID'], row['SHOT_TYPE'],
+                (row.get('GAME_EVENT_ID'),  # natural key with game_id — makes re-runs idempotent
+                 row['PLAYER_ID'], row['GAME_ID'], row['SHOT_TYPE'],
                  row['LOC_X'], row['LOC_Y'], row['SHOT_DISTANCE'],
                  row['SHOT_MADE_FLAG'], None,  # defender: not in shot chart API
                  row.get('MINUTES_REMAINING'),
@@ -257,8 +258,8 @@ def load_into_db(conn, players, games, shots, plays):
                 for _, row in shots.iterrows()
             ]
             execute_values(cursor,
-                """INSERT INTO shot_charts (player_id, game_id, shot_type, x, y, distance, made_flag, defender, minutes_remaining, period_seconds_remaining, period)
-                   VALUES %s""",
+                """INSERT INTO shot_charts (event_id, player_id, game_id, shot_type, x, y, distance, made_flag, defender, minutes_remaining, period_seconds_remaining, period)
+                   VALUES %s ON CONFLICT (game_id, event_id) DO NOTHING""",
                 shot_rows)
             print(f"  Loaded {len(shot_rows)} shot attempts")
 
@@ -275,7 +276,7 @@ def load_into_db(conn, players, games, shots, plays):
             ]
             execute_values(cursor,
                 """INSERT INTO play_by_play (event_id, game_id, event_type, game_clock, player_ids, lineups, running_score)
-                   VALUES %s""",
+                   VALUES %s ON CONFLICT (game_id, event_id) DO NOTHING""",
                 play_rows)
             print(f"  Loaded {len(play_rows)} play-by-play events")
 

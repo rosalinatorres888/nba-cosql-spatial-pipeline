@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS games (
 -- ============================================================
 CREATE TABLE IF NOT EXISTS shot_charts (
     id                        SERIAL PRIMARY KEY,
+    event_id                  INTEGER, -- nba_api GAME_EVENT_ID: natural key within a game
     player_id                 INTEGER REFERENCES players(player_id),
     game_id                   TEXT    REFERENCES games(game_id),
     shot_type                 TEXT,    -- '2PT Field Goal' or '3PT Field Goal'
@@ -51,6 +52,11 @@ CREATE TABLE IF NOT EXISTS shot_charts (
     period_seconds_remaining  INTEGER, -- seconds component of period clock (0-59) — NOT total seconds
     period                    INTEGER  -- 1-4 regulation, 5+ overtime
 );
+
+-- Natural key: one row per game event. Makes collection idempotent via
+-- ON CONFLICT DO NOTHING (re-running collect/load scripts cannot duplicate rows).
+CREATE UNIQUE INDEX IF NOT EXISTS uq_shot_charts_game_event
+    ON shot_charts(game_id, event_id);
 
 CREATE INDEX IF NOT EXISTS idx_shot_charts_player ON shot_charts(player_id);
 CREATE INDEX IF NOT EXISTS idx_shot_charts_game   ON shot_charts(game_id);
@@ -69,6 +75,10 @@ CREATE TABLE IF NOT EXISTS play_by_play (
     lineups       TEXT,                -- NULL — not directly available in API
     running_score TEXT                 -- e.g. '102 - 98'
 );
+
+-- Natural key: one row per game event (event_id = actionNumber from PlayByPlayV3).
+CREATE UNIQUE INDEX IF NOT EXISTS uq_pbp_game_event
+    ON play_by_play(game_id, event_id);
 
 CREATE INDEX IF NOT EXISTS idx_pbp_game      ON play_by_play(game_id);
 CREATE INDEX IF NOT EXISTS idx_pbp_event     ON play_by_play(event_type);

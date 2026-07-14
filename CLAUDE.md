@@ -46,7 +46,7 @@ nba_api → PostgreSQL (nba_spatial) → annotation/  → model/nl2sql.py
 1. `collect_nba_data.py` pulls Celtics 2023–24 data from `nba_api` and bulk-inserts into PostgreSQL via `psycopg2.extras.execute_values`.
 2. `annotation/annotation_batch_class{1-8}_*.csv` hold the hand-annotated WOZ corpus — the source of truth for both few-shot examples and evaluation gold SQL.
 3. `model/nl2sql.py` loads approved annotation pairs at init, selects 3 examples per query by keyword overlap, and calls Claude Opus 4.8 with the schema + examples injected into the prompt.
-4. `model/evaluate.py` splits the corpus 80/20 (seed=42), runs inference on the test split, and compares results via execution against the live DB.
+4. `model/evaluate.py` groups pairs into conversations (coreference chains), splits 80/20 at the conversation level (seed=42), builds the few-shot pool from the TRAIN split only (passed via `NL2SQL(examples=...)` to prevent test leakage), runs inference on the test split, and compares results via execution against the live DB in READ ONLY transactions.
 
 **`NL2SQL` inference pipeline** (`model/nl2sql.py`):
 - `load_examples()` — reads all 8 annotation CSVs, keeps only `execution_pass=TRUE` pairs
@@ -54,9 +54,9 @@ nba_api → PostgreSQL (nba_spatial) → annotation/  → model/nl2sql.py
 - `build_prompt()` — injects `DB_SCHEMA` (hardcoded in `nl2sql.py`), 3 examples, and a coreference block if `prior_sql` is provided
 - `NL2SQL.predict()` — calls `claude-opus-4-8` with `thinking: {"type": "adaptive"}`; strips markdown fences from response
 
-**Coreference resolution**: Turn 2+ utterances pass `prior_sql` to the prompt. The evaluator uses `is_coreference_turn()` (pronoun/starter heuristic) to decide when to supply the prior gold SQL as context.
+**Coreference resolution**: Turn 2+ utterances pass `prior_sql` to the prompt. The evaluator uses `is_coreference_turn()` (pronoun/starter heuristic) to group conversations; during evaluation, follow-up turns receive the model's OWN previous prediction (never the gold SQL), so multi-turn cascading failures are measured.
 
-**`results_match()` in `evaluate.py`**: Normalized comparison — case-insensitive, column-name-agnostic, row-order-independent, float-tolerant (2 decimal places). Includes a numeric-value fallback for row-vs-column transpositions (e.g., a 1-row 2-column pivot vs. a 2-row GROUP BY producing the same numbers).
+**`results_match()` in `evaluate.py`**: Strict comparison — same row count required, then multiset equality of normalized row tuples (case-insensitive, column-name-agnostic, row-order-independent, float-tolerant to 2 decimal places). There is deliberately NO numeric-only or transposition fallback — it accepted mislabeled results and inflated accuracy. Do not re-add it.
 
 ## Database Schema
 

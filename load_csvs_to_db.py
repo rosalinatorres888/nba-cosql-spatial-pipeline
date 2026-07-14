@@ -111,6 +111,7 @@ def load_shot_charts(cursor, season, season_type):
 
     rows = [
         (
+            row.get("GAME_EVENT_ID"),       # natural key with game_id — makes re-runs idempotent
             row.get("PLAYER_ID"),
             row["GAME_ID"],
             row.get("SHOT_TYPE"),
@@ -127,9 +128,9 @@ def load_shot_charts(cursor, season, season_type):
     ]
     execute_values(cursor,
         """INSERT INTO shot_charts
-               (player_id, game_id, shot_type, x, y, distance,
+               (event_id, player_id, game_id, shot_type, x, y, distance,
                 made_flag, defender, minutes_remaining, period_seconds_remaining, period)
-           VALUES %s""",
+           VALUES %s ON CONFLICT (game_id, event_id) DO NOTHING""",
         rows)
     print(f"  ✅ shot_charts: {len(rows)} rows")
     return len(rows)
@@ -159,7 +160,7 @@ def load_play_by_play(cursor, season, season_type):
     execute_values(cursor,
         """INSERT INTO play_by_play
                (event_id, game_id, event_type, game_clock, player_ids, lineups, running_score)
-           VALUES %s""",
+           VALUES %s ON CONFLICT (game_id, event_id) DO NOTHING""",
         rows)
     print(f"  ✅ play_by_play: {len(rows)} rows")
     return len(rows)
