@@ -3,15 +3,14 @@
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 ![Claude Opus 4.8](https://img.shields.io/badge/Claude-Opus%204.8-D97757?logo=anthropic&logoColor=white)
-![Execution Accuracy](https://img.shields.io/badge/Execution%20Accuracy-100%25-22c55e)
-![IAA](https://img.shields.io/badge/Inter--Rater%20Agreement-98.6%25-22c55e)
+![Evaluation](https://img.shields.io/badge/Evaluation-re--run%20pending-eab308)
 ![License](https://img.shields.io/badge/License-MIT-6b7280)
 
 By: Rosalina Torres
 
 **IE7500 Natural Language Processing · Northeastern University College of Engineering · Summer 2026**
 
-Conversational Text-to-SQL (CoSQL) pipeline over NBA spatial shot-chart data — with a hand-annotated WOZ corpus, coreference resolution, and 100% execution accuracy on a held-out test split.
+Conversational Text-to-SQL (CoSQL) pipeline over NBA spatial shot-chart data — with a hand-annotated WOZ corpus, coreference resolution, and an execution-accuracy evaluation harness.
 
 
 ---
@@ -55,16 +54,22 @@ Users ask multi-turn basketball questions in natural language. The system resolv
 
 | Metric | Value |
 |---|---|
-| Execution accuracy (held-out test set) | **28/28 = 100%** |
-| SQL validity rate | 28/28 = 100% |
+| Execution accuracy (held-out test set) | *pending re-run — see note below* |
 | Annotation corpus size | 139 NL/SQL pairs |
 | Annotation execution rate | 138/139 = 99.3% |
-| Cross-rater agreement (Cohen's κ) | 68/69 = 98.6% |
 | DIN-SQL GPT-4 CoSQL benchmark (Pourreza & Rafiei, 2023) | 55.9% EM |
 
-See: [Bug Report](docs/BUG_REPORT.md)
+> **Note on the previously reported 100%:** an audit found three issues that
+> inflated the earlier 28/28 figure: (1) test items were present in the
+> few-shot example pool (train/test leakage), (2) follow-up turns were given
+> the gold SQL of the prior turn instead of the model's own prediction, and
+> (3) the result matcher had a numeric-only fallback that accepted mislabeled
+> results. All three are fixed in `model/evaluate.py` (conversation-level
+> split, train-only example pool, self-conditioned multi-turn, strict
+> matching). The headline metric will be updated after re-running the
+> evaluation against the live database.
 
-The model reached 100% through 6 evaluation iterations — from 42.9% baseline to 100% final — documented in [Evaluation Results](docs/EVALUATION_RESULTS.md)  
+See: [Bug Report](docs/BUG_REPORT.md) and iteration history in [Evaluation Results](docs/EVALUATION_RESULTS.md)  
 
 ---
 
@@ -119,7 +124,7 @@ play_by_play(id, event_id, game_id, event_type, game_clock, player_ids,
 | Shot Characteristics | 15 | "How many shots with less than 5 seconds left?" |
 
 **Execution rate:** 138/139 (99.3%) — 1 permanent `needs_revision`: "contested shots" query; `defender` is NULL for all rows in the nba_api ShotChartDetail endpoint — data unavailable at the source.  
-**Cross-rater agreement:** 68/69 (98.6%)
+**Auditing protocol:** each pair audited by one of two auditors (single-rater protocol). Cohen's kappa is not computable without doubly-annotated pairs — see `kappa_report.py`.
 
 ---
 
@@ -181,7 +186,8 @@ python kappa_report.py      # inter-annotator agreement
 ├── load_csvs_to_db.py            # CSV → PostgreSQL bulk loader
 ├── kappa_report.py               # IAA report
 ├── cosql_annotation_review.html  # Browser-based annotation review tool
-└── sql_training_full.csv         # Flat training corpus (all 139 pairs)
+├── tests/                        # Matcher + split integrity tests (pytest)
+└── LICENSE                       # MIT
 ```
 
 ---

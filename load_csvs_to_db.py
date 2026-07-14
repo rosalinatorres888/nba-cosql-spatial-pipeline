@@ -119,6 +119,7 @@ def load_shot_charts(cursor, season, season_type):
             row.get("SHOT_DISTANCE"),
             row.get("SHOT_MADE_FLAG"),
             None,                           # defender not in shot chart API
+            row.get("MINUTES_REMAINING"),   # clock queries need minutes_remaining * 60 + period_seconds_remaining
             row.get("SECONDS_REMAINING"),   # period time remaining — NOT shot clock
             row.get("PERIOD"),
         )
@@ -127,7 +128,7 @@ def load_shot_charts(cursor, season, season_type):
     execute_values(cursor,
         """INSERT INTO shot_charts
                (player_id, game_id, shot_type, x, y, distance,
-                made_flag, defender, period_seconds_remaining, period)
+                made_flag, defender, minutes_remaining, period_seconds_remaining, period)
            VALUES %s""",
         rows)
     print(f"  ✅ shot_charts: {len(rows)} rows")

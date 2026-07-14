@@ -47,13 +47,22 @@ def connect() -> psycopg2.extensions.connection:
 
 
 def run_query(conn, sql: str) -> Optional[list]:
-    """Execute a SELECT query and return rows, or None on error."""
+    """
+    Execute a query inside a read-only transaction with a statement timeout.
+    READ ONLY makes PostgreSQL reject any write — including writes hidden in
+    CTEs (WITH x AS (DELETE ...)) — and the timeout bounds runaway queries.
+    For defense in depth, also connect with a read-only database role.
+    """
     if not sql or not sql.strip().upper().startswith(("SELECT", "WITH")):
         return None
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("BEGIN TRANSACTION READ ONLY")
+            cur.execute("SET LOCAL statement_timeout = '10s'")
             cur.execute(sql)
-            return [dict(r) for r in cur.fetchall()]
+            rows = [dict(r) for r in cur.fetchall()]
+        conn.rollback()  # end the read-only transaction
+        return rows
     except Exception:
         conn.rollback()
         return None
@@ -75,41 +84,27 @@ def normalize_value(v) -> str:
 
 def results_match(gold_rows: Optional[list], pred_rows: Optional[list]) -> bool:
     """
-    Two result sets match if they contain the same values regardless of:
-    - column names
-    - row order
-    - string case ('First Half' == 'first_half')
-    - minor float representation differences (AVG vs CAST/COUNT)
-    - transposition: 1-row N-column pivot vs N-row 2-column GROUP BY
-      (e.g. paint_pct=0.64, above_break_pct=0.37  vs  two rows of zone+fg_pct)
+    Strict execution match: same number of rows, and the same multiset of
+    normalized row-value tuples (row order and column names ignored;
+    string case and minor float representation absorbed by normalize_value).
+
+    Deliberately NO shape-transposition or numeric-only fallback: those
+    accept results with swapped labels or coincidentally equal numbers,
+    inflating accuracy. A transposed-but-correct prediction counts as a
+    miss — that is the conservative, publishable choice.
     """
     if gold_rows is None or pred_rows is None:
         return False
+    if len(gold_rows) != len(pred_rows):
+        return False
 
     def normalize(rows):
-        return sorted([
+        return sorted(
             tuple(sorted(normalize_value(v) for v in r.values()))
             for r in rows
-        ])
+        )
 
-    if len(gold_rows) == len(pred_rows):
-        return normalize(gold_rows) == normalize(pred_rows)
-
-    # Fallback for transposed shapes: compare the flat sorted set of numeric
-    # values only. Safe because non-transposed mismatches have different counts.
-    def numeric_values(rows):
-        vals = []
-        for r in rows:
-            for v in r.values():
-                n = normalize_value(v)
-                try:
-                    float(n)
-                    vals.append(n)
-                except ValueError:
-                    pass
-        return sorted(vals)
-
-    return numeric_values(gold_rows) == numeric_values(pred_rows)
+    return normalize(gold_rows) == normalize(pred_rows)
 
 
 COREFERENCE_PRONOUNS = {"he", "his", "she", "her", "they", "their", "those", "them",
@@ -133,39 +128,61 @@ def is_coreference_turn(utterance: str) -> bool:
     return has_pronoun and not has_named_entity
 
 
-def load_test_pairs(split: float, seed: int) -> tuple[list[dict], list[dict]]:
+def load_conversations(split: float, seed: int) -> tuple[list[list[dict]], list[list[dict]]]:
     """
-    Load all approved annotation pairs and split into train/test.
-    Preserves file order within each class so prior_gold_sql can be attached
-    to Turn 2+ (coreference-dependent) utterances.
-    Returns (train_pairs, test_pairs).
+    Load all approved annotation pairs grouped into conversations, then split
+    train/test AT THE CONVERSATION LEVEL so no turn of a test conversation
+    ever appears on the train side.
+
+    A conversation = a maximal run of file-order rows where every row after
+    the first is a coreference-dependent follow-up of the row before it.
+    Standalone questions are single-turn conversations.
+
+    Returns (train_conversations, test_conversations).
     """
-    all_pairs = []
+    conversations: list[list[dict]] = []
     for class_name, fname in ANNOTATION_FILES:
         path = ANNOTATION_DIR / fname
         if not path.exists():
             continue
-        class_pairs = []
+        current: list[dict] = []
         with open(path, newline="", encoding="utf-8") as f:
             for row in csv.DictReader(f):
-                if row.get("execution_pass", "").upper() == "TRUE" and row.get("utterance") and row.get("gold_sql"):
-                    class_pairs.append({
-                        "utterance": row["utterance"],
-                        "gold_sql": row["gold_sql"],
-                        "query_class": class_name,
-                        "notes": row.get("notes", ""),
-                        "prior_gold_sql": None,
-                    })
-        # attach prior turn's gold SQL for coreference-dependent utterances
-        for i, pair in enumerate(class_pairs):
-            if i > 0 and is_coreference_turn(pair["utterance"]):
-                pair["prior_gold_sql"] = class_pairs[i - 1]["gold_sql"]
-        all_pairs.extend(class_pairs)
+                if not (row.get("execution_pass", "").upper() == "TRUE"
+                        and row.get("utterance") and row.get("gold_sql")):
+                    continue
+                pair = {
+                    "utterance": row["utterance"],
+                    "gold_sql": row["gold_sql"],
+                    "query_class": class_name,
+                    "notes": row.get("notes", ""),
+                }
+                if current and is_coreference_turn(pair["utterance"]):
+                    current.append(pair)
+                else:
+                    if current:
+                        conversations.append(current)
+                    current = [pair]
+        if current:
+            conversations.append(current)
 
     random.seed(seed)
-    random.shuffle(all_pairs)
-    cutoff = int(len(all_pairs) * (1 - split))
-    return all_pairs[:cutoff], all_pairs[cutoff:]
+    random.shuffle(conversations)
+    cutoff = int(len(conversations) * (1 - split))
+    return conversations[:cutoff], conversations[cutoff:]
+
+
+def examples_from_conversations(convs: list[list[dict]]) -> dict[str, list[dict]]:
+    """Build the few-shot example pool (grouped by class) from train conversations only."""
+    pool: dict[str, list[dict]] = {}
+    for conv in convs:
+        for pair in conv:
+            pool.setdefault(pair["query_class"], []).append({
+                "utterance": pair["utterance"],
+                "sql": pair["gold_sql"],
+                "notes": pair["notes"],
+            })
+    return pool
 
 
 def evaluate(split: float = 0.2, seed: int = 42) -> dict:
@@ -174,12 +191,15 @@ def evaluate(split: float = 0.2, seed: int = 42) -> dict:
     print("CoSQL NBA Spatial — NL→SQL Inference")
     print("=" * 60)
 
-    train_pairs, test_pairs = load_test_pairs(split, seed)
-    print(f"\nDataset:   {len(train_pairs) + len(test_pairs)} total approved pairs")
-    print(f"Train:     {len(train_pairs)} pairs  ({int((1-split)*100)}%)")
-    print(f"Test:      {len(test_pairs)} pairs  ({int(split*100)}%)")
+    train_convs, test_convs = load_conversations(split, seed)
+    train_n = sum(len(c) for c in train_convs)
+    test_pairs_n = sum(len(c) for c in test_convs)
+    print(f"\nDataset:   {train_n + test_pairs_n} approved pairs in {len(train_convs) + len(test_convs)} conversations")
+    print(f"Train:     {len(train_convs)} conversations / {train_n} pairs")
+    print(f"Test:      {len(test_convs)} conversations / {test_pairs_n} pairs")
 
-    model = NL2SQL()
+    # Few-shot pool is built from TRAIN conversations only — no test leakage.
+    model = NL2SQL(examples=examples_from_conversations(train_convs))
     conn = connect()
     print(f"\n✅ Connected to {DB_NAME}")
 
@@ -187,45 +207,54 @@ def evaluate(split: float = 0.2, seed: int = 42) -> dict:
     total_valid = 0
     total_match = 0
     errors = []
+    i = 0
 
-    print(f"\nRunning inference on {len(test_pairs)} test pairs...\n")
+    print(f"\nRunning inference on {test_pairs_n} test pairs...\n")
 
-    for i, pair in enumerate(test_pairs):
-        cls = pair["query_class"]
-        if cls not in per_class:
-            per_class[cls] = {"total": 0, "valid": 0, "match": 0}
+    for conv in test_convs:
+        # Follow-up turns receive the model's OWN previous prediction, not the
+        # gold SQL — so cascading multi-turn failures are measured, not hidden.
+        prior_pred_sql = None
+        for turn_idx, pair in enumerate(conv):
+            i += 1
+            cls = pair["query_class"]
+            if cls not in per_class:
+                per_class[cls] = {"total": 0, "valid": 0, "match": 0}
+            per_class[cls]["total"] += 1
 
-        per_class[cls]["total"] += 1
+            prior_sql = prior_pred_sql if turn_idx > 0 else None
+            predicted_sql = model.predict(pair["utterance"], prior_sql=prior_sql)
+            prior_pred_sql = predicted_sql
+            gold_rows = run_query(conn, pair["gold_sql"])
+            pred_rows = run_query(conn, predicted_sql)
 
-        prior_sql = pair.get("prior_gold_sql")
-        predicted_sql = model.predict(pair["utterance"], prior_sql=prior_sql)
-        gold_rows = run_query(conn, pair["gold_sql"])
-        pred_rows = run_query(conn, predicted_sql)
+            valid = pred_rows is not None
+            match = results_match(gold_rows, pred_rows)
 
-        valid = pred_rows is not None
-        match = results_match(gold_rows, pred_rows)
+            if valid:
+                total_valid += 1
+                per_class[cls]["valid"] += 1
+            if match:
+                total_match += 1
+                per_class[cls]["match"] += 1
 
-        if valid:
-            total_valid += 1
-            per_class[cls]["valid"] += 1
-        if match:
-            total_match += 1
-            per_class[cls]["match"] += 1
+            status = "✅" if match else ("⚠️ " if valid else "❌")
+            turn_tag = f" (turn {turn_idx + 1})" if len(conv) > 1 else ""
+            print(f"  [{i:3d}/{test_pairs_n}] {status} {cls}{turn_tag}")
+            print(f"         NL:   {pair['utterance'][:80]}")
+            print(f"         Gold: {pair['gold_sql'][:80]}")
+            print(f"         Pred: {predicted_sql[:80]}")
+            if not match:
+                errors.append({
+                    "utterance": pair["utterance"],
+                    "gold_sql": pair["gold_sql"],
+                    "predicted_sql": predicted_sql,
+                    "query_class": cls,
+                    "error": "result_mismatch" if valid else "execution_error",
+                })
+            print()
 
-        status = "✅" if match else ("⚠️ " if valid else "❌")
-        print(f"  [{i+1:3d}/{len(test_pairs)}] {status} {cls}")
-        print(f"         NL:   {pair['utterance'][:80]}")
-        print(f"         Gold: {pair['gold_sql'][:80]}")
-        print(f"         Pred: {predicted_sql[:80]}")
-        if not match:
-            errors.append({
-                "utterance": pair["utterance"],
-                "gold_sql": pair["gold_sql"],
-                "predicted_sql": predicted_sql,
-                "query_class": cls,
-                "error": "result_mismatch" if valid else "execution_error",
-            })
-        print()
+    test_pairs = [p for c in test_convs for p in c]
 
     n = len(test_pairs)
     validity_rate = total_valid / n if n else 0
